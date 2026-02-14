@@ -9,7 +9,7 @@ public interface IAuthService {
     public Pair<User, String> login(String email, String password);
     public User signUp(User user);
     //public User resetProfilePassword(String email, ResetPasswordRequestDto resetPasswordRequest);
-    public User logoutByEmail(String token, String email);
+    public User logoutByEmail(String email);
     public Boolean validateToken(String token, Long userId);
     public String forgotPassword(String email);
 }

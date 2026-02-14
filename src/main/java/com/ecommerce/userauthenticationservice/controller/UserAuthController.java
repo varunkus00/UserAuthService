@@ -76,7 +76,7 @@ public class UserAuthController {
 
     @PostMapping("/logout/{email}")
     public ResponseEntity<UserDto> logout(@PathVariable("email") String email,
-                                          @RequestHeader(value = "Authorization") String authHeader) {
+                                          @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             if( authHeader == null || !authHeader.startsWith("Bearer ") ) {
                 System.out.println(authHeader);
@@ -84,7 +84,7 @@ public class UserAuthController {
                 return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
             }
             String token =  authHeader.substring(7);
-            User user = authService.logoutByEmail(token, email);
+            User user = authService.logoutByEmail(email);
 
             return new ResponseEntity<>(from(user), HttpStatus.ACCEPTED);
         } catch (UserNotFoundException e) {

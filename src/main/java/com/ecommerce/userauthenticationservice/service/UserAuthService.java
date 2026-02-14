@@ -17,12 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UserAuthService implements  IAuthService {
@@ -71,11 +69,14 @@ public class UserAuthService implements  IAuthService {
         session.setStatus(Status.ACTIVE);
         sessionRepo.save(session);
 
+        //TODO ? Set All the previous sessions to INACTIVE so that there is only one login session.
+
         return new Pair<User, String>(user, token);
     }
 
     @Override
-    public User logoutByEmail( String token, String email ) {
+    @Transactional
+    public User logoutByEmail( String email ) {
         Optional<User>  userOp = userAuthRepo.findByEmail(email);
         if(  !userOp.isPresent() ){
             throw new UserNotFoundException("There is no user with email : " + email);
@@ -83,13 +84,8 @@ public class UserAuthService implements  IAuthService {
 
         User user = userOp.get();
 
-        Optional<Session> sessionOp = sessionRepo.findByToken(token);
-        if( sessionOp.isPresent() ){
-            sessionRepo.delete(sessionOp.get());
-        } else {
-            throw new AuthorizationTokenNotFound(" Ahh! No Such Token Found!");
-        }
-
+        List<Session> sessionList = sessionRepo.findByUser(user);
+        sessionRepo.deleteAll(sessionList);
         return user;
     }
 
