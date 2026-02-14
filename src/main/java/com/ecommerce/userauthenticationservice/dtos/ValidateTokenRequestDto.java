@@ -1,11 +1,12 @@
 package com.ecommerce.userauthenticationservice.dtos;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class ResetPasswordRequestDto {
-    private String newPassword;
-    private String confirmPassword;
+public class ValidateTokenRequestDto {
+    String token;
+    Long userId;
 }

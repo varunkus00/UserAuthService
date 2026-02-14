@@ -2,6 +2,7 @@ package com.ecommerce.userauthenticationservice.controller;
 
 import com.ecommerce.userauthenticationservice.dtos.PasswordUpdateRequestDto;
 import com.ecommerce.userauthenticationservice.dtos.ProfileDto;
+import com.ecommerce.userauthenticationservice.dtos.ResetPasswordRequestDto;
 import com.ecommerce.userauthenticationservice.dtos.SessionInfoDto;
 import com.ecommerce.userauthenticationservice.exception.PasswordDoesNotMatchException;
 import com.ecommerce.userauthenticationservice.exception.UserNotFoundException;
@@ -9,9 +10,12 @@ import com.ecommerce.userauthenticationservice.models.Session;
 import com.ecommerce.userauthenticationservice.models.User;
 
 import com.ecommerce.userauthenticationservice.service.ProfileManagementServices;
+import org.antlr.v4.runtime.atn.SemanticContext;
+import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.ott.InvalidOneTimeTokenException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -39,11 +43,11 @@ public class ProfileManagementController {
         }
     }
 
-    @PutMapping("/modifyPassword/{email}")
+    /*@PutMapping("/modifyPassword/{email}")
     public ResponseEntity<ProfileDto> modifyPassword(@PathVariable("email") String email, @RequestBody PasswordUpdateRequestDto requestDto){
 
         try {
-            User user = profileManagementServices.modifyProfilePassword(email, requestDto.getOldPassword(), requestDto.getNewPassword());
+            User user = profileManagementServices.resetProfilePassword(email);
             List<Session> sessionList = null;
             if( user != null ) {
                 sessionList = profileManagementServices.getUserSessionInfo(user);
@@ -54,7 +58,7 @@ public class ProfileManagementController {
         } catch( PasswordDoesNotMatchException passwordDoesNotMatchException ) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
-    }
+    }*/
 
     @PutMapping("/modifyPhoneNumber/{email}")
     public ResponseEntity<ProfileDto> modifyPhoneNumber(@PathVariable("email") String email,  @RequestParam("newPhoneNumber") String phoneNumber){
@@ -83,6 +87,21 @@ public class ProfileManagementController {
             return new ResponseEntity<>(from(user, sessionList), HttpStatus.OK);
         } catch (UserNotFoundException e) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/resetProfilePassword")
+    public ResponseEntity<String> resetProfilePassword(@RequestParam String token, @RequestBody ResetPasswordRequestDto resetPasswordRequestDto) {
+        Boolean changePassword = false;
+        try {
+            changePassword = profileManagementServices.resetProfilePassword(token, resetPasswordRequestDto.getNewPassword());
+        } catch (UserNotFoundException | InvalidOneTimeTokenException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+        if( changePassword ) {
+            return new ResponseEntity<>("Reset Password Successful", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Link Expired! Please retry forget password", HttpStatus.BAD_REQUEST);
         }
     }
 

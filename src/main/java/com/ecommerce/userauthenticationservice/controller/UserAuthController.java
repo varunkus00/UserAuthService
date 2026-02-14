@@ -1,9 +1,6 @@
 package com.ecommerce.userauthenticationservice.controller;
 
-import com.ecommerce.userauthenticationservice.dtos.LoginRequestDto;
-import com.ecommerce.userauthenticationservice.dtos.ResetPasswordRequestDto;
-import com.ecommerce.userauthenticationservice.dtos.SignUpRequestDto;
-import com.ecommerce.userauthenticationservice.dtos.UserDto;
+import com.ecommerce.userauthenticationservice.dtos.*;
 import com.ecommerce.userauthenticationservice.exception.AuthorizationTokenNotFound;
 import com.ecommerce.userauthenticationservice.exception.PasswordDoesNotMatchException;
 import com.ecommerce.userauthenticationservice.exception.UserAlreadyExistException;
@@ -21,7 +18,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth/")
+@RequestMapping("/auth")
 public class UserAuthController {
 
     @Autowired
@@ -64,18 +61,17 @@ public class UserAuthController {
        }
     }
 
-    @PutMapping("/resetPassword/{email}")
-    public ResponseEntity<UserDto> resetProfilePassword(@PathVariable String email, @RequestBody ResetPasswordRequestDto request) {
-
+    @GetMapping("/forgotPassword/{email}")
+    public String forgotPassword(@PathVariable String email) {
+        String resetLink="";
         try {
-            User user = authService.resetProfilePassword(email, request);
-
-            return new ResponseEntity<>(from(user), HttpStatus.CREATED);
-        } catch( PasswordDoesNotMatchException notMatchException ) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-        } catch( UserNotFoundException notFoundException ) {
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            resetLink = authService.forgotPassword(email);
+        } catch (UserNotFoundException e) {
+            return e.getMessage();
         }
+
+        return resetLink;
+
     }
 
     @PostMapping("/logout/{email}")
@@ -95,6 +91,17 @@ public class UserAuthController {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         } catch( AuthorizationTokenNotFound e) {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/validateToken")
+    public ResponseEntity<String> validateToken(@RequestBody ValidateTokenRequestDto requestDto) {
+        System.out.println(" Inside Validate Token");
+        Boolean validateResult = authService.validateToken(requestDto.getToken(), requestDto.getUserId());
+        if( validateResult ) {
+            return new ResponseEntity<>("Token validated successfully", HttpStatus.OK);
+        } else {
+            return  new ResponseEntity<>("Token invalid or expired", HttpStatus.UNAUTHORIZED);
         }
     }
 

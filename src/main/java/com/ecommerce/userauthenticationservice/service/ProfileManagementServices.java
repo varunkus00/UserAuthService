@@ -1,14 +1,16 @@
 package com.ecommerce.userauthenticationservice.service;
 
-import com.ecommerce.userauthenticationservice.dtos.SessionInfoDto;
 import com.ecommerce.userauthenticationservice.exception.ActiveSessionNotFoundException;
+import com.ecommerce.userauthenticationservice.exception.PasswordDoesNotMatchException;
 import com.ecommerce.userauthenticationservice.exception.UserNotFoundException;
+import com.ecommerce.userauthenticationservice.models.PasswordResetToken;
 import com.ecommerce.userauthenticationservice.models.Session;
 import com.ecommerce.userauthenticationservice.models.User;
+import com.ecommerce.userauthenticationservice.repos.PasswordResetRepo;
 import com.ecommerce.userauthenticationservice.repos.SessionRepo;
 import com.ecommerce.userauthenticationservice.repos.UserAuthRepo;
-import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.ott.InvalidOneTimeTokenException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +31,9 @@ public class ProfileManagementServices implements IProfileServices{
 
     @Autowired
     public SessionRepo sessionRepo;
+
+    @Autowired
+    public PasswordResetRepo passwordResetRepo;
 
     @Override
     public List<Session> getUserSessionInfo(User user) {
@@ -53,10 +58,39 @@ public class ProfileManagementServices implements IProfileServices{
     }
 
     @Override
-    public User modifyProfilePassword(String email, String oldPassword, String newPassword) {
-            Pair<User, String> pair = authService.login(email, oldPassword);
-            pair.a.setPassword(bCryptPasswordEncoder.encode(newPassword));
-            return userAuthRepo.save(pair.a);
+    public Boolean resetProfilePassword(String token, String password) {
+
+        Optional<PasswordResetToken>  passwordResetTokenOp = passwordResetRepo.findByToken(token);
+
+        if( !passwordResetTokenOp.isPresent() ){
+            throw new InvalidOneTimeTokenException("Link Invalid! Please retry");
+        }
+
+        PasswordResetToken passwordResetToken = passwordResetTokenOp.get();
+
+        if( !passwordResetToken.getActive() ) {
+            throw new InvalidOneTimeTokenException("Link Already Used!");
+        }
+
+        Long currentTimeMillis = System.currentTimeMillis();
+        Long expiry = passwordResetToken.getExpiryTime();
+        if( expiry < currentTimeMillis ) {
+            passwordResetToken.setActive(false);
+            passwordResetRepo.save(passwordResetToken);
+            return false;
+        }
+
+        Optional<User> userOp = userAuthRepo.findById(passwordResetToken.getUserId());
+        if( !userOp.isPresent() ){
+            throw new UserNotFoundException("User not found");
+        }
+        User user = userOp.get();
+        user.setPassword(bCryptPasswordEncoder.encode(password));
+        passwordResetToken.setActive(false);
+        passwordResetRepo.save(passwordResetToken);
+        userAuthRepo.save(user);
+
+        return true;
     }
 
     @Override
