@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -81,12 +82,14 @@ public class OAuthConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
             throws Exception {
         http
-                .authorizeHttpRequests((authorize) -> authorize
+                .csrf(csrf -> csrf.disable())  // disable CSRF for REST APIs
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/auth/signUp", "/auth/login", "/auth/validateToken").permitAll()
                         .anyRequest().authenticated()
                 )
-                // Form login handles the redirect to the login page from the
-                // authorization server filter chain
-                .formLogin(Customizer.withDefaults());
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .formLogin(Customizer.withDefaults()) // optional, only for browser-based login
+                .httpBasic(httpBasic -> httpBasic.disable()); // disable basic auth for REST
 
         return http.build();
     }
